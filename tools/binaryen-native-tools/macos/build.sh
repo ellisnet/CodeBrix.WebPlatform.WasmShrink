@@ -3,10 +3,11 @@
 # build.sh - build wasm-opt for osx-arm64 and/or osx-x64, from this repository only
 # ==============================================================================================
 #
-#   NEVER YET RUN. Written on Linux on 2026-11-18, which has no Apple SDK. Expect to fix
-#   something on the first real run; fix it IN THE SCRIPT and record it in
-#   ../BUILD-PROVENANCE.txt, then rewrite this header and README.txt's status block with what
-#   the run established.
+#   Written on Linux on 2026-11-18, which has no Apple SDK. FIRST RUN on 2026-11-19 on an Apple
+#   Silicon Mac (macOS 27.2.1, Xcode 27.2): both slices built, gated, reproduced
+#   byte-identically and adopted. That run fixed one thing here - $TMPDIR's trailing "/" broke
+#   the -ffile-prefix-map options and hid the result from the build-path gate (details in
+#   ../BUILD-PROVENANCE.txt).
 #
 #   ./build.sh                both slices (the default; meant for an Apple Silicon Mac)
 #   ./build.sh all            the same
@@ -16,10 +17,19 @@
 # Options (environment variables):
 #   DEPLOYMENT_TARGET_ARM64=11.0   minimum macOS of the arm64 slice (default 11.0 - the first
 #                                  macOS on Apple Silicon)
-#   DEPLOYMENT_TARGET_X64=10.15    minimum macOS of the x86_64 slice (default 10.15 - binaryen's
-#                                  own CMakeLists default, "needed for C++17 std::path")
-#   Those two are exactly what upstream's own macOS release binaries get (create_release.yml
-#   leaves binaryen's 10.15 default in place, and clang raises it to 11.0 for arm64).
+#   DEPLOYMENT_TARGET_X64=11.0     minimum macOS of the x86_64 slice (default 11.0, RAISED from
+#                                  binaryen's own CMakeLists default of 10.15 on 2026-11-18, by
+#                                  the owner's decision: the libc++ headers of current Xcode
+#                                  (27.2) support macOS 11.0 and newer only, and at 10.15 every
+#                                  C++ file warns "The selected platform is no longer supported
+#                                  by libc++." - see README.txt, THE BUILD)
+#   Upstream's own macOS release binaries get 10.15 (x86_64) and 11.0 (arm64): create_release.yml
+#   leaves binaryen's 10.15 default in place, and clang raises it to 11.0 for arm64.
+#
+# THE PRE-STRIP EXECUTABLE is copied to ../output/osx-<arch>/unstripped/wasm-opt before the
+# strip. It is NOT committed (the owner's decision, 2026-11-18): adoption copies it to
+# ../unstripped/osx-<arch>/, which is git-ignored, so it stays on the build Mac. There is no
+# DWARF in it (no -g), only the symbol table that `strip` removes.
 #
 # WHAT IT DOES
 #   For each slice: copies ../binaryen (vendored, unmodified) to scratch, configures it with
@@ -47,8 +57,12 @@ first_line() { sed -n '1p'; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TOOLS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 OUTPUT_DIR="$TOOLS_DIR/output"
-SCRATCH_ROOT="${TMPDIR:-/tmp}/codebrix-binaryen-build-macos"
-SCRATCH_ROOT="${SCRATCH_ROOT%/}"
+# macOS's $TMPDIR ends in "/". Drop it BEFORE appending: CMake collapses the resulting "//",
+# so the compiler sees single-slash paths, and a -ffile-prefix-map spelled with "//" never
+# matches (the first real run, 2026-11-18, embedded 107 scratch paths that way, and the
+# build-path gate - which searched for the "//" spelling - passed regardless).
+SCRATCH_ROOT="${TMPDIR:-/tmp}"
+SCRATCH_ROOT="${SCRATCH_ROOT%/}/codebrix-binaryen-build-macos"
 
 # shellcheck source=../linux/pins.env
 . "$TOOLS_DIR/linux/pins.env"
@@ -81,7 +95,7 @@ build_slice() {
     local arch="$1" rid osxarch target scratch build out started
     case "$arch" in
         arm64) rid=osx-arm64; osxarch=arm64;  target="${DEPLOYMENT_TARGET_ARM64:-11.0}" ;;
-        x64)   rid=osx-x64;   osxarch=x86_64; target="${DEPLOYMENT_TARGET_X64:-10.15}" ;;
+        x64)   rid=osx-x64;   osxarch=x86_64; target="${DEPLOYMENT_TARGET_X64:-11.0}" ;;
     esac
     scratch="$SCRATCH_ROOT/$rid/binaryen"
     build="$SCRATCH_ROOT/$rid/build"
@@ -117,6 +131,10 @@ build_slice() {
     local exe="$out/$EXE_NAME"
     cp "$build/bin/$EXE_NAME" "$exe"
     local size_linked; size_linked="$(wc -c < "$exe" | tr -d ' ')"
+    # Keep the pre-strip executable (local only - see the header).
+    mkdir -p "$out/unstripped"
+    cp "$exe" "$out/unstripped/$EXE_NAME"
+    local sha_linked; sha_linked="$(shasum -a 256 "$out/unstripped/$EXE_NAME" | cut -d' ' -f1)"
     # Strip every symbol the executable does not need, then sign ad hoc: stripping invalidates
     # the linker's ad-hoc signature on arm64, and arm64 macOS refuses to run unsigned code.
     strip "$exe"
@@ -153,7 +171,7 @@ build_slice() {
     if codesign --verify --strict "$exe" 2> /dev/null; then pass "codesign --verify: ad-hoc signature valid"
     else fail "codesign --verify failed"; fi
 
-    local hits; hits="$(strings -a "$exe" | grep -F -e "$scratch" -e "$build" -e "$TOOLS_DIR" -e "$HOME" || true)"
+    local hits; hits="$(strings -a "$exe" | grep -F -e "$SCRATCH_ROOT" -e "$scratch" -e "$build" -e "$TOOLS_DIR" -e "$HOME" -e "/var/folders/" || true)"
     [ -z "$hits" ] && pass "no build paths in the binary" || fail "build paths in the binary: $(printf '%s\n' "$hits" | first_line)"
 
     local want
@@ -206,7 +224,8 @@ $(printf '%s\n' "$summary" | sed 's/^/  /')
 Result
 ------------------------------------------------------------------------------
 File             : $EXE_NAME (strip, then codesign --force --sign -)
-Size (as linked) : $size_linked bytes (not kept)
+Size (as linked) : $size_linked bytes -> unstripped/$EXE_NAME (kept locally, NOT committed)
+SHA256 as linked : $sha_linked
 Size (stripped)  : $size bytes
 Size (gzip -9 -n): $gzsize bytes
 SHA256           : $sha
@@ -219,7 +238,7 @@ Gate
 ------------------------------------------------------------------------------
 $(cat "$gate")
 EOF
-    ( cd "$out" && shasum -a 256 "$EXE_NAME" $(printf '%s\n' "$LICENCE_FILES" | cut -d: -f1) > SHA256SUMS.txt )
+    ( cd "$out" && shasum -a 256 "$EXE_NAME" "unstripped/$EXE_NAME" $(printf '%s\n' "$LICENCE_FILES" | cut -d: -f1) > SHA256SUMS.txt )
     echo "  $exe"
     echo "  sha256 $sha"
 }

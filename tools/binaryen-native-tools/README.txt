@@ -87,9 +87,13 @@ FOLDER MAP
                           static CRT), README.txt. Written 2026-11-18, UNRUN
   macos/                  osx-arm64, osx-x64. build.sh (Apple clang, system
                           libc++, ad-hoc signature), README.txt. Written
-                          2026-11-18, UNRUN
+                          2026-11-18, first run 2026-11-19 on Jeremy's Mac
 
   output/                 build results (git-ignored). Disposable
+  unstripped/             the macOS builds' pre-strip executables, kept on the
+                          build Mac only: GIT-IGNORED except its README.txt
+                          (the owner's decision - they are not committed).
+                          Never shipped, never an input to any build
 
 
 WHICH README TO READ
@@ -109,12 +113,13 @@ THE FIVE RUNTIME IDENTIFIERS
   linux-x64      linux/build.sh x64                  wasm-opt       BUILT
   linux-arm64    linux/build.sh arm64                wasm-opt       BUILT
   win-x64        windows/build.wasm-opt.ps1          wasm-opt.exe   PENDING
-  osx-arm64      macos/build.sh arm64                wasm-opt       PENDING
-  osx-x64        macos/build.sh x64                  wasm-opt       PENDING
+  osx-arm64      macos/build.sh arm64                wasm-opt       BUILT
+  osx-x64        macos/build.sh x64                  wasm-opt       BUILT
 
 BUILT = built here from binaryen/, gated and adopted into
-../../native_libraries/<rid>/. PENDING = the script is written but has never
-been run; the owner runs it on his own Windows machine and Mac.
+../../native_libraries/<rid>/ (the osx-* RIDs on Jeremy's Mac, 2026-11-19).
+PENDING = the script is written but has never been run; the owner runs it on
+the Windows machine.
 BUILD-PROVENANCE.txt says, per RID, exactly what happened.
 
 NOT SUPPORTED, and neither built nor scripted: linux-riscv64, win-arm64,

@@ -27,8 +27,8 @@
 #
 # Verify at any time with:
 #     git status --ignored --porcelain -- tools/binaryen-native-tools
-#         -> should list only output/ contents (and nothing at all on a clean
-#            clone)
+#         -> should list only output/ and unstripped/ contents (and nothing at
+#            all on a clean clone)
 # ==============================================================================
 
 # Re-include everything under this folder, overriding the root .gitignore.
@@ -41,6 +41,13 @@
 # platform build. THE LEADING SLASH MATTERS: without it the pattern would match
 # ANY directory named "output" at any depth, including inside binaryen/.
 /output/
+
+# The pre-strip executables of the adopted builds, kept on the build machine
+# only: the owner decided (2026-11-18) NOT to commit them. Same leading-slash
+# rule; the trailing /* (not a bare /unstripped/) lets the README below be
+# re-included - a directory that is itself excluded is never descended into.
+/unstripped/*
+!/unstripped/README.txt
 
 # Finder droppings. Needed explicitly: the "!*" above re-includes everything
 # under this folder and so overrides any .DS_Store rule inherited from the root

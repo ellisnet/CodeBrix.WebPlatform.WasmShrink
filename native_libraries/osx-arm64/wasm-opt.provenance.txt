@@ -1,0 +1,88 @@
+wasm-opt -- macOS on Apple Silicon (osx-arm64)
+================================================================================
+This executable was BUILT HERE, from the binaryen source snapshot vendored in
+this repository, by:
+
+    tools/binaryen-native-tools/macos/build.sh   (both slices in one run)
+
+on Jeremy's Apple Silicon Mac with Apple's own toolchain. Nothing was
+downloaded; the build reaches nothing outside this repository. It was built
+twice from scratch on 2026-11-19 UTC (runs 1 and 2) with byte-identical
+results, stripped and as linked.
+
+binaryen version  : 133 (tag version_133); `wasm-opt --version` prints
+                    "wasm-opt version 133"
+binaryen commit   : fba5005a132d85d578be5bd010e0487ed8e2ce3e
+Source            : tools/binaryen-native-tools/binaryen/ (unmodified; see
+                    tools/binaryen-native-tools/UPSTREAM.txt)
+Patches applied   : none
+
+Built             : 2026-11-19 04:46:06 UTC (run 2; run 1 04:42:52 UTC,
+                    identical bytes)
+Build duration    : 80s (run 2; 94s run 1) - configure, build, gate
+Build host        : Mac mini (Mac14,12), Apple M2 Pro, macOS 27.2.1, arm64 -
+                    native
+Toolchain         : Xcode 27.2 (27B52), macOS SDK 27.2
+                    Apple clang version 21.0.0 (clang-2100.4.1.1)
+                    ld-27106.1
+                    cmake version 4.4.5 (Homebrew) / ninja 1.13.2 (Homebrew)
+CMake options     : -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+                    -DBUILD_TESTS=OFF -DENABLE_WERROR=OFF -DBUILD_MIMALLOC=OFF
+                    -DBUILD_LLVM_DWARF=ON -DBYN_ENABLE_ASSERTIONS=ON
+                    -DCMAKE_SKIP_RPATH=ON
+                    -DCMAKE_OSX_ARCHITECTURES=arm64
+                    -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+                    CMAKE_C_FLAGS / CMAKE_CXX_FLAGS =
+                      "-ffile-prefix-map=<scratch src>=binaryen
+                       -ffile-prefix-map=<scratch build>=build
+                       -ffile-prefix-map=<tools folder>=binaryen-native-tools"
+                    Release flags -O3 -DNDEBUG (CMake's) + binaryen's -UNDEBUG
+                    (assertions on); target wasm-opt only; then `strip` and
+                    codesign --force --sign - (ad hoc)
+Warnings          : 0 compiler
+
+Architecture      : Mach-O 64-bit executable, arm64 (thin)
+Links             : /usr/lib/libc++.1.dylib /usr/lib/libSystem.B.dylib
+                    - the system only; libbinaryen is linked statically
+LC_RPATH          : none
+Minimum macOS     : 11.0 (LC_BUILD_VERSION minos) - the first macOS on Apple
+                    Silicon, as upstream's own macOS binaries
+LC_UUID           : F6057FDA-7F14-3C38-95A3-12FE255E43D9
+Signature         : ad hoc (codesign --sign -, after strip); not notarised
+
+Output SHA-256    : 955ed8c64c6d2ed8ba24a96e0b2bc0678042d278a998fd674407c8c8d9f731f7
+Output size       : 11655856 bytes (stripped; 3891481 bytes with gzip -9 -n)
+As linked         : 24915704 bytes, SHA-256
+                    a21e9b062bb49cf55d16be5a538f7568fe6a1d9882ba83e46dcb4dccc457e542
+                    (same LC_UUID). NOT committed - the owner's decision; kept
+                    on the build Mac in tools/binaryen-native-tools/
+                    unstripped/osx-arm64/ (git-ignored)
+
+Gate              : thin arm64 Mach-O, system-only links, no LC_RPATH, minos
+                    11.0, codesign --verify --strict, no build paths,
+                    binaryen's configure lines (static library, LLVM DWARF,
+                    assertions), and the functional gate on
+                    linux/gate-fixture.wat: --version 133; -O0 / -Oz valid
+                    wasm, -Oz no larger; the consumer's three flag sets
+                    accepted, each with --fuzz-exec 8/8 results before =
+                    after = expected; --debuginfo larger than --strip-debug;
+                    every output read back and re-run 8/8 - run natively
+                    - ALL PASSED
+
+Vendored on       : 2026-11-18
+
+LICENCE FILES BESIDE THIS ONE (one per piece compiled into wasm-opt; the
+same object files as the Linux build, from the same CMake targets - see
+tools/binaryen-native-tools/macos/README.txt; byte-identical to the
+linux-x64 copies):
+  LICENSE-Binaryen.txt     binaryen's LICENSE, verbatim (Apache-2.0)
+  LICENSE-Llvm.txt         third_party/llvm-project/include/llvm/LICENSE.TXT,
+                           verbatim (Apache-2.0 WITH LLVM-exception; legacy
+                           University of Illinois/NCSA licence)
+  LICENSE-LlvmSupport.txt  third_party/llvm-project/include/llvm/Support/
+                           LICENSE.TXT, verbatim - the LLVM System Interface
+                           Library's extra copyright line
+  LICENSE-Unicode.txt      the Unicode, Inc. notice from ConvertUTF.cpp's
+                           header, verbatim
+  LICENSE-Fp16.txt         third_party/FP16/LICENSE, verbatim (MIT)
+See THIRD-PARTY-NOTICES.txt in the repository root.

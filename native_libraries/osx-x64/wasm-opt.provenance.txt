@@ -1,0 +1,69 @@
+wasm-opt -- macOS on Intel (osx-x64)
+================================================================================
+This executable was BUILT HERE, from the binaryen source snapshot vendored in
+this repository, by:
+
+    tools/binaryen-native-tools/macos/build.sh   (both slices in one run)
+
+on Jeremy's Apple Silicon Mac with Apple's own toolchain - CROSS-BUILT for
+x86_64 (CMAKE_OSX_ARCHITECTURES=x86_64). Nothing was downloaded; the build
+reaches nothing outside this repository. It was built twice from scratch on
+2026-11-19 UTC (runs 1 and 2) with byte-identical results, stripped and as
+linked.
+
+binaryen version  : 133 (tag version_133); `wasm-opt --version` prints
+                    "wasm-opt version 133"
+binaryen commit   : fba5005a132d85d578be5bd010e0487ed8e2ce3e
+Source            : tools/binaryen-native-tools/binaryen/ (unmodified; see
+                    tools/binaryen-native-tools/UPSTREAM.txt)
+Patches applied   : none
+
+Built             : 2026-11-19 04:47:38 UTC (run 2; run 1 04:44:28 UTC,
+                    identical bytes)
+Build duration    : 91s (run 2; 96s run 1) - configure, build, gate
+Build host        : Mac mini (Mac14,12), Apple M2 Pro, macOS 27.2.1, arm64 -
+                    cross-compiling for x86_64
+Toolchain         : Xcode 27.2 (27B52), macOS SDK 27.2
+                    Apple clang version 21.0.0 (clang-2100.4.1.1)
+                    ld-27106.1
+                    cmake version 4.4.5 (Homebrew) / ninja 1.13.2 (Homebrew)
+CMake options     : as osx-arm64, with -DCMAKE_OSX_ARCHITECTURES=x86_64 and
+                    -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+Warnings          : 0 compiler
+
+Architecture      : Mach-O 64-bit executable, x86_64 (thin)
+Links             : /usr/lib/libc++.1.dylib /usr/lib/libSystem.B.dylib
+                    - the system only; libbinaryen is linked statically
+LC_RPATH          : none
+Minimum macOS     : 11.0 (LC_BUILD_VERSION minos). RAISED from binaryen's own
+                    default of 10.15 (which upstream's x86_64 release binary
+                    keeps) by the owner's decision of 2026-11-18: the libc++
+                    headers of Xcode 27.2 support macOS 11.0 and newer only -
+                    at 10.15 every C++ file warns "The selected platform is no
+                    longer supported by libc++." So this executable does not
+                    run on macOS 10.15 Catalina.
+LC_UUID           : 1F9A57FA-3E7E-3ACD-8C13-AA4318591B7F
+Signature         : ad hoc (codesign --sign -, after strip); not notarised
+
+Output SHA-256    : e42ce62ba5790865d4d39e2b137762c04b9ae9db12541b892cf05c6f160a4224
+Output size       : 15219088 bytes (stripped; 4932551 bytes with gzip -9 -n)
+As linked         : 28227800 bytes, SHA-256
+                    cf61d64322d3bb2de1670181c921b5d15bfd6c3b2729fe596d7626bd09246be8
+                    (same LC_UUID). NOT committed - the owner's decision; kept
+                    on the build Mac in tools/binaryen-native-tools/
+                    unstripped/osx-x64/ (git-ignored)
+
+Gate              : as osx-arm64 - thin x86_64 Mach-O, system-only links, no
+                    LC_RPATH, minos 11.0, codesign --verify --strict, no build
+                    paths, binaryen's configure lines, and the full functional
+                    gate - ALL PASSED
+Functional gate   : RUN UNDER ROSETTA 2 on the Apple Silicon build Mac - not
+                    on Intel hardware. Running it on an Intel Mac remains
+                    worth doing before a release.
+
+Vendored on       : 2026-11-18
+
+LICENCE FILES BESIDE THIS ONE: the same five as osx-arm64 (LICENSE-Binaryen,
+-Llvm, -LlvmSupport, -Unicode, -Fp16), byte-identical to the linux-x64 copies.
+See osx-arm64/wasm-opt.provenance.txt for what each covers, and
+THIRD-PARTY-NOTICES.txt in the repository root.

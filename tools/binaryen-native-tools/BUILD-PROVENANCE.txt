@@ -21,8 +21,12 @@ Common to every entry below
                     2026-09-21); `wasm-opt --version` = "wasm-opt version 133"
   Patches applied : NONE. There is no patch step.
   Shipped file    : wasm-opt (wasm-opt.exe on Windows), stripped. No unstripped
-                    twin is kept: the build passes no -g, so there is no debug
-                    information to keep
+                    twin is COMMITTED: the build passes no -g, so there is no
+                    debug information to keep. The macOS builds keep the
+                    pre-strip executable (symbol table only) in
+                    unstripped/<rid>/, which is git-ignored - kept on the
+                    build Mac only, by the owner's decision of 2026-11-18;
+                    the Linux builds do not keep it
   Licence files   : LICENSE-Binaryen.txt, LICENSE-Llvm.txt,
                     LICENSE-LlvmSupport.txt, LICENSE-Unicode.txt,
                     LICENSE-Fp16.txt beside every binary - one per piece
@@ -92,6 +96,55 @@ Linux (the two linux-* entries)
                     container-build.sh now attributes libbinaryen.a members by
                     the object folder they were compiled in. The binary was
                     unaffected (run 2 is byte-identical to run 1).
+
+macOS (the two osx-* entries)
+--------------------------------------------------------------------------------
+  Route           : macos/build.sh (both slices in one run) on Jeremy's Mac
+                    mini (Apple M2 Pro, macOS 27.2.1), Xcode 27.2 / SDK 27.2,
+                    Apple clang 21.0.0, cmake 4.4.5 and ninja 1.13.2
+                    (Homebrew). osx-x64 is CROSS-built there; its functional
+                    gate ran under Rosetta 2
+  cmake options   : -G Ninja + the pins.env options (as Linux) +
+                    -DCMAKE_OSX_ARCHITECTURES=arm64|x86_64
+                    -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 (BOTH slices) +
+                    CMAKE_C_FLAGS = CMAKE_CXX_FLAGS = "-ffile-prefix-map=
+                    <scratch src>=binaryen -ffile-prefix-map=<scratch build>=
+                    build -ffile-prefix-map=<tools folder>=
+                    binaryen-native-tools"; target wasm-opt ONLY; the system
+                    libc++; then `strip` and codesign --force --sign -
+  Minimum macOS   : 11.0 on both slices. For x86_64 that is RAISED from
+                    binaryen's (and upstream's) 10.15, by the owner's decision
+                    of 2026-11-18: Xcode 27.2's libc++ headers support macOS
+                    11.0 and newer only, and at 10.15 every C++ file warns
+                    "The selected platform is no longer supported by libc++."
+                    The 11.0 builds have 0 compiler warnings
+  Pre-strip copy  : the script copies the linked executable to
+                    output/<rid>/unstripped/wasm-opt before `strip` and
+                    records its size and sha256; on adoption it is copied to
+                    unstripped/<rid>/ (git-ignored, NOT committed - the owner's
+                    decision). Same LC_UUID as the shipped file
+  Compiled in     : not re-measured on macOS (Apple's linker map was not
+                    taken). Apple's linker links the same object files from the
+                    same CMake targets, so the licence list is the Linux one
+  Reproducibility : both slices built TWICE from scratch on 2026-11-19 UTC (runs
+                    1 at 04:42-04:45, 2 at 04:46-04:48): stripped AND
+                    as-linked executables byte-identical
+  First-run fixes : the script had never run before 2026-11-19. Fixed IN THE
+                    SCRIPT after the first run:
+                    1. build paths: macOS's $TMPDIR ends in "/", so the scratch
+                       path the script built contained "//". CMake collapses
+                       it, so the compiler saw single-slash paths and the
+                       -ffile-prefix-map options (spelled with "//") never
+                       matched - the first arm64 executable carried 107 scratch
+                       paths (binaryen keeps assert(), which embeds __FILE__).
+                       Worse, the build-path gate searched for the "//"
+                       spelling and passed. The script now drops the trailing
+                       "/" first, and the gate also searches for the scratch
+                       root and /var/folders/. The rebuilt executables have no
+                       build path in them, stripped or as linked
+                    2. the x86_64 floor raised from 10.15 to 11.0 (above), and
+                       the pre-strip copy added - both decided before the run
+  Gate            : macos/README.txt, THE GATE
 
 
 ================================================================================
@@ -225,27 +278,76 @@ To do            : the owner runs the script on his Windows machine, fixes
                    (windows/README.txt) and replaces this section
 
 ================================================================================
-osx-arm64                                     PENDING - script written, NOT RUN
+osx-arm64                                                         BUILT + PASSED
 ================================================================================
-Route            : macos/build.sh arm64 - written 2026-11-18 on Linux, NEVER
-                   RUN. Apple clang via CMake + Ninja,
-                   CMAKE_OSX_ARCHITECTURES=arm64, deployment target 11.0,
-                   system libc++, strip + ad-hoc codesign; gate: thin slice,
-                   system-only links, no LC_RPATH, minos, codesign --verify, no
-                   build paths, configure lines, functional-gate.sh
-Binary           : NONE. native_libraries/osx-arm64/ does not exist yet
-To do            : run on the owner's Apple Silicon Mac; adopt per
-                   macos/README.txt and replace this section
+Built            : 2026-11-19 04:46:06 UTC (run 2; run 1 04:42:52 UTC -
+                   byte-identical)
+Built by         : macos/build.sh (both slices in one run)
+Build host       : Mac mini (Mac14,12), Apple M2 Pro, 10 cores, macOS 27.2.1 -
+                   native
+Duration         : 80s (run 1: 94s) - configure, build, gate
+Toolchain        : Xcode 27.2 (27B52), SDK 27.2, Apple clang version 21.0.0
+                   (clang-2100.4.1.1), ld-27106.1, cmake version 4.4.5, ninja
+                   1.13.2
+Warnings         : 0 compiler warnings
+
+File             : wasm-opt
+Size (as linked) : 24,915,704 bytes - kept in unstripped/osx-arm64/ on the
+                   build Mac (git-ignored, NOT committed)
+SHA256 as linked : a21e9b062bb49cf55d16be5a538f7568fe6a1d9882ba83e46dcb4dccc457e542
+Size (stripped)  : 11,655,856 bytes   <- shipped
+Size (gzip -9 -n): 3,891,481 bytes
+SHA256           : 955ed8c64c6d2ed8ba24a96e0b2bc0678042d278a998fd674407c8c8d9f731f7
+LC_UUID          : F6057FDA-7F14-3C38-95A3-12FE255E43D9 (shipped and as linked)
+Mach-O           : thin arm64 executable; ad-hoc signature (re-signed after
+                   strip); not notarised
+Links            : /usr/lib/libc++.1.dylib /usr/lib/libSystem.B.dylib
+Minimum macOS    : 11.0 (LC_BUILD_VERSION minos)
+Gate             : thin arm64, system-only links, no LC_RPATH, minos 11.0,
+                   codesign --verify --strict, no build paths, configure lines
+                   (static libbinaryen, LLVM DWARF, -UNDEBUG), functional gate
+                   (--version 133; -O0 627 B, -Oz 373 B; release 373 B, debug
+                   437 B, packing 373 B, each --fuzz-exec 8/8; read back 8/8)
+                   run natively - ALL PASSED
+Managed tests    : dotnet test --solution CodeBrix.WebPlatform.WasmShrink.slnx
+                   -c Release on the build Mac, which runs this file: 77
+                   tests, 0 failed, 0 skipped (2026-11-19)
+Adopted into native_libraries/osx-arm64/ : YES, 2026-11-19, with the five
+                   LICENSE-*.txt files (byte-identical to linux-x64's) and
+                   wasm-opt.provenance.txt
 
 ================================================================================
-osx-x64                                       PENDING - script written, NOT RUN
+osx-x64                                                           BUILT + PASSED
 ================================================================================
-Route            : macos/build.sh x64 - as osx-arm64 with
-                   CMAKE_OSX_ARCHITECTURES=x86_64 and deployment target 10.15,
-                   cross-built on the Apple Silicon Mac; the functional gate
-                   runs it under Rosetta 2 when Rosetta is installed
-Binary           : NONE. native_libraries/osx-x64/ does not exist yet
-To do            : as osx-arm64
+Built            : 2026-11-19 04:47:38 UTC (run 2; run 1 04:44:28 UTC -
+                   byte-identical)
+Built by         : macos/build.sh (both slices in one run)
+Build host       : the same Mac, cross-compiling for x86_64
+Duration         : 91s (run 1: 96s)
+Toolchain        : as osx-arm64
+Warnings         : 0 compiler warnings
+
+File             : wasm-opt
+Size (as linked) : 28,227,800 bytes - kept in unstripped/osx-x64/ on the
+                   build Mac (git-ignored, NOT committed)
+SHA256 as linked : cf61d64322d3bb2de1670181c921b5d15bfd6c3b2729fe596d7626bd09246be8
+Size (stripped)  : 15,219,088 bytes   <- shipped
+Size (gzip -9 -n): 4,932,551 bytes
+SHA256           : e42ce62ba5790865d4d39e2b137762c04b9ae9db12541b892cf05c6f160a4224
+LC_UUID          : 1F9A57FA-3E7E-3ACD-8C13-AA4318591B7F (shipped and as linked)
+Mach-O           : thin x86_64 executable; ad-hoc signature (after strip);
+                   not notarised
+Links            : /usr/lib/libc++.1.dylib /usr/lib/libSystem.B.dylib
+Minimum macOS    : 11.0 (LC_BUILD_VERSION minos) - raised from 10.15, see
+                   macOS above
+Gate             : as osx-arm64 - ALL PASSED, the functional gate under
+                   Rosetta 2 (identical sizes and results)
+Note             : Rosetta 2 is not Intel hardware, and the managed tests run
+                   the arm64 file on this Mac. Running the functional gate or
+                   the tests on an Intel Mac remains worth doing before a
+                   release
+Adopted into native_libraries/osx-x64/ : YES, 2026-11-19, with the five
+                   LICENSE-*.txt files and wasm-opt.provenance.txt
 
 ================================================================================
 DIFFERENCES FROM UPSTREAM'S RELEASE BUILD
@@ -300,6 +402,9 @@ folder's builds differ:
                     and so do we), Ninja (upstream macOS; upstream Windows uses
                     the Visual Studio generator), the static MSVC runtime
                     (binaryen's CMakeLists selects it for non-Debug MSVC
-                    builds), macOS deployment floors 10.15 (x64) / 11.0 (arm64)
-                    and the system libc++.
+                    builds), the macOS arm64 deployment floor 11.0 and the
+                    system libc++.
+  Changed, macOS  : the x86_64 deployment floor is 11.0 here, 10.15 upstream
+                    (see macOS above: current Xcode's libc++ supports 11.0 and
+                    newer only).
 ================================================================================
