@@ -1,0 +1,98 @@
+wasm-opt.exe -- Windows x64 (win-x64)
+================================================================================
+This executable was BUILT HERE, from the binaryen source snapshot vendored in
+this repository, by:
+
+    tools/binaryen-native-tools/windows/build.wasm-opt.ps1
+
+on Jeremy's x64 Windows machine with Microsoft's own toolchain (MSVC through
+CMake's Ninja generator). Nothing was downloaded; the build reaches nothing
+outside this repository. It was the script's FIRST run; it needed no fix.
+
+binaryen version  : 133 (tag version_133); `wasm-opt --version` prints
+                    "wasm-opt version 133"
+binaryen commit   : fba5005a132d85d578be5bd010e0487ed8e2ce3e
+Source            : tools/binaryen-native-tools/binaryen/ (unmodified; see
+                    tools/binaryen-native-tools/UPSTREAM.txt), copied to
+                    C:\cbx-wasm-opt\src for the build
+Patches applied   : none
+
+Built             : 2026-11-19 05:20:40 UTC
+Build duration    : 211s (configure + build + gate)
+Build host        : Dell Precision 7770, Windows 11 Pro 10.0.26300 (AMD64) -
+                    native
+Toolchain         : Visual Studio Professional 2026 18.12.1 [18.12.12412.261]
+                    Microsoft C/C++ Optimizing Compiler 19.52.37029 for x64
+                    (MSVC toolset 14.52.37025), Windows SDK 10.0.26100
+                    cmake version 4.4.3 / ninja 1.13.2 (the pip wheels in
+                    %APPDATA%\Python\Python314\Scripts)
+Build root        : C:\cbx-wasm-opt (outside the user profile on purpose:
+                    MSVC has no -ffile-prefix-map, and binaryen keeps assert()
+                    on, so source paths under the build root are in the binary)
+CMake options     : -G Ninja -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
+                    -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+                    -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+                    -DBUILD_TESTS=OFF -DENABLE_WERROR=OFF -DBUILD_MIMALLOC=OFF
+                    -DBUILD_LLVM_DWARF=ON -DBYN_ENABLE_ASSERTIONS=ON
+                    -DCMAKE_SKIP_RPATH=ON (the pins.env set, plus the
+                    compiler and the static CRT); target wasm-opt only
+                    binaryen's own MSVC flags: /O2 /UNDEBUG (assertions on)
+                    /MP, linked with /STACK:8388608; no /DEBUG, so no .pdb
+Warnings          : 464 compiler warnings (MSVC /W3 on binaryen's and LLVM's
+                    own code; binaryen builds with /WX-), 0 CMake
+
+Architecture      : PE32+ executable, x64 (machine 0x8664)
+Imports           : KERNEL32.dll SHELL32.dll - the operating system only; the
+                    C/C++ runtime is linked statically (/MT), so no Visual C++
+                    Redistributable is needed
+Debug symbols     : none (Release links without /DEBUG); no unstripped twin
+
+Output SHA-256    : b9efab29f6a19c7485212be117943367c0a6180c83ec14d41072fee1b1af3815
+Output size       : 10310656 bytes (4026638 bytes with gzip -9 -n, measured
+                    with GNU gzip 1.14; the 4201244 in BUILD-INFO.txt is .NET's
+                    GZipStream and is not comparable)
+Reproducibility   : not byte-reproducible - link.exe stamps the build time into
+                    the image (the dav1d builds' finding); compare size and
+                    gate result, not the hash
+
+Gate              : PE machine x64, OS-only imports (no VCRUNTIME / MSVCP /
+                    ucrtbase / api-ms-win-crt), no .pdb, no user-profile or
+                    repository path in the binary (the build root's is, as
+                    assert() file names - expected), binaryen's configure lines
+                    (static libbinaryen, /DBUILD_LLVM_DWARF, /UNDEBUG), and the
+                    functional gate on linux/gate-fixture.wat: --version 133;
+                    -O0 627 B / -Oz 373 B valid wasm, -Oz no larger; the
+                    consumer's three flag sets (release 373 B, debug 437 B,
+                    packing 373 B) accepted, each with --fuzz-exec 8/8 results
+                    before = after = expected; --debuginfo larger than
+                    --strip-debug; every output read back and re-run 8/8
+                    - ALL PASSED, on the build host
+Managed tests     : dotnet test --project tests/CodeBrix.WebPlatform.WasmShrink.Tests
+                    in Debug AND Release on the build host, which runs this file
+                    (the copy under the test output's wasm-opt/win-x64/ checked
+                    by sha256): 77 tests, 75 passed, 0 failed, 2 skipped (the
+                    two EnsureExecutable tests - "Windows has no execute
+                    permission"), 2026-11-19
+
+Vendored on       : 2026-11-18
+
+LICENCE FILES BESIDE THIS ONE (one per piece compiled into wasm-opt; the
+linker-map evidence is in tools/binaryen-native-tools/BUILD-PROVENANCE.txt,
+from the Linux build - MSVC links the same objects from the same CMake
+targets):
+  LICENSE-Binaryen.txt     binaryen's LICENSE, verbatim (Apache-2.0)
+  LICENSE-Llvm.txt         third_party/llvm-project/include/llvm/LICENSE.TXT,
+                           verbatim (Apache-2.0 WITH LLVM-exception; legacy
+                           University of Illinois/NCSA licence)
+  LICENSE-LlvmSupport.txt  third_party/llvm-project/include/llvm/Support/
+                           LICENSE.TXT, verbatim - the LLVM System Interface
+                           Library's extra copyright line (Path.cpp is linked;
+                           binaryen's copy compiles its Unix/ and Windows/
+                           Path.inc parts out with #if 0 on every platform, and
+                           Windows/Path.inc is not vendored at all)
+  LICENSE-Unicode.txt      the Unicode, Inc. notice from ConvertUTF.cpp's
+                           header, verbatim (ConvertUTF.cpp is linked)
+  LICENSE-Fp16.txt         third_party/FP16/LICENSE, verbatim (MIT) - the
+                           header-only half-precision conversions
+All five are byte-identical to the linux-x64 copies.
+See THIRD-PARTY-NOTICES.txt in the repository root.

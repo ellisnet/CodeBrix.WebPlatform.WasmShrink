@@ -262,20 +262,62 @@ Adopted into native_libraries/linux-arm64/ : YES, 2026-11-18, with the five
                    LICENSE-*.txt files and wasm-opt.provenance.txt
 
 ================================================================================
-win-x64                                       PENDING - script written, NOT RUN
+win-x64                                                           BUILT + PASSED
 ================================================================================
-Route            : windows/build.wasm-opt.ps1 - written 2026-11-18 on Linux,
-                   NEVER RUN. MSVC (Visual Studio 2022+) through CMake's Ninja
-                   generator, static CRT (-DCMAKE_MSVC_RUNTIME_LIBRARY=
-                   MultiThreaded), the pins.env cmake options, target wasm-opt
-                   only. Gate: PE machine, OS-only imports (no VCRUNTIME /
-                   MSVCP / ucrtbase / api-ms-win-crt), no user-profile or
-                   repository path, configure lines, and the functional gate
-                   in PowerShell
-Binary           : NONE. native_libraries/win-x64/ does not exist yet
-To do            : the owner runs the script on his Windows machine, fixes
-                   what the first run finds IN THE SCRIPT, adopts the result
-                   (windows/README.txt) and replaces this section
+Built            : 2026-11-19 05:20:40 UTC
+Built by         : windows/build.wasm-opt.ps1 - its FIRST run; it ran unchanged
+                   and needed no fix
+Build host       : Dell Precision 7770, Windows 11 Pro 10.0.26300 (AMD64) -
+                   native
+Duration         : 211s - configure, build, gate
+Toolchain        : Visual Studio Professional 2026 18.12.1 [18.12.12412.261],
+                   cl 19.52.37029 for x64 (MSVC toolset 14.52.37025), Windows
+                   SDK 10.0.26100, cmake version 4.4.3, ninja 1.13.2 (pip
+                   wheels)
+Build root       : C:\cbx-wasm-opt (the script's default)
+Build PATH       : the registry Machine + User PATH with C:\Strawberry\c\bin
+                   removed (Strawberry Perl's MinGW folder carries an older
+                   cmake 3.29.2 and ninja 1.12.0 that would otherwise be found
+                   first)
+CMake options    : as BUILD-INFO.txt: the pins.env set plus -G Ninja,
+                   cl for C and C++, -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+                   (static CRT); binaryen's MSVC flags /O2 /UNDEBUG /MP,
+                   /STACK:8388608
+Warnings         : 464 compiler warnings (MSVC /W3 on binaryen's and LLVM's own
+                   code, /WX-), 0 CMake
+
+File             : wasm-opt.exe
+Size             : 10,310,656 bytes   <- shipped (no strip step on Windows; no
+                   .pdb is produced)
+Size (gzip -9 -n): 4,026,638 bytes (GNU gzip 1.14 on the shipped file;
+                   BUILD-INFO.txt's 4,201,244 is .NET GZipStream)
+SHA256           : b9efab29f6a19c7485212be117943367c0a6180c83ec14d41072fee1b1af3815
+                   NOT byte-reproducible: link.exe stamps the build time into
+                   the image
+PE               : PE32+ x64 (machine 0x8664)
+Imports          : KERNEL32.dll SHELL32.dll - OS only; no VCRUNTIME / MSVCP /
+                   ucrtbase / api-ms-win-crt
+Gate             : PE machine, OS-only imports, no .pdb, no user-profile or
+                   repository path (the build root's path IS present, as
+                   assert() file names - expected and recorded), configure
+                   lines (static libbinaryen, /DBUILD_LLVM_DWARF, /UNDEBUG),
+                   functional gate (--version 133; -O0 627 B, -Oz 373 B;
+                   release 373 B, debug 437 B, packing 373 B, each --fuzz-exec
+                   8/8; read back 8/8) run natively - ALL PASSED. The sizes
+                   are the same as every other RID's
+Third-party      : not re-measured with /MAP on Windows; MSVC links the same
+                   objects from the same CMake targets as the Linux build
+                   whose linker map is the evidence above, so the five
+                   licence files are the same
+Managed tests    : dotnet test --project tests/CodeBrix.WebPlatform.WasmShrink.Tests
+                   in Debug AND Release on the build host, which runs this file
+                   (checked by sha256 in the test output's wasm-opt/win-x64/):
+                   77 tests, 75 passed, 0 failed, 2 skipped (the two
+                   EnsureExecutable tests: "Windows has no execute permission"),
+                   2026-11-19
+Adopted into native_libraries/win-x64/ : YES, 2026-11-19, with the five
+                   LICENSE-*.txt files (byte-identical to linux-x64's) and
+                   wasm-opt.exe.provenance.txt
 
 ================================================================================
 osx-arm64                                                         BUILT + PASSED

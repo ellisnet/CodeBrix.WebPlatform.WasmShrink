@@ -2,11 +2,17 @@
 tools/binaryen-native-tools/windows - building wasm-opt.exe for win-x64
 ================================================================================
 
->>> STATUS 2026-11-18: build.wasm-opt.ps1 is WRITTEN BUT NEVER RUN - it was
-    written on Linux, where it cannot run. There is NO win-x64 binary in
-    ../../../native_libraries/ yet; ../BUILD-PROVENANCE.txt lists win-x64 as
-    PENDING. Expect to fix something on the first real run; fix it in the
-    script, record it in ../BUILD-PROVENANCE.txt, and rewrite this block. <<<
+>>> STATUS 2026-11-19: FIRST RUN DONE. build.wasm-opt.ps1 (written on Linux on
+    2026-11-18) ran UNCHANGED on Jeremy's x64 Windows 11 machine with Visual
+    Studio Professional 2026 18.12.1 (cl 19.52.37029), cmake 4.4.3 and ninja
+    1.13.2, and passed the whole gate, the functional gate included. The
+    result is adopted into ../../../native_libraries/win-x64/ and recorded in
+    ../BUILD-PROVENANCE.txt; the managed suite passed against it.
+
+    One thing the run needed outside the script: C:\Strawberry\c\bin (Strawberry
+    Perl's MinGW folder, with its own older cmake 3.29.2, ninja 1.12.0 and
+    nasm) was taken OFF THE PATH for the build, so the cmake and ninja above
+    were the ones found. If Strawberry Perl is installed, do the same. <<<
 
 WHAT THIS IS
 --------------------------------------------------------------------------------

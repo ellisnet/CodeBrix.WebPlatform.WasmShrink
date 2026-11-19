@@ -84,7 +84,8 @@ FOLDER MAP
                           functional gate shared by every platform),
                           README.txt
   windows/                win-x64. build.wasm-opt.ps1 (MSVC + CMake + Ninja,
-                          static CRT), README.txt. Written 2026-11-18, UNRUN
+                          static CRT), README.txt. Written 2026-11-18, first
+                          run 2026-11-19 on Jeremy's Windows machine
   macos/                  osx-arm64, osx-x64. build.sh (Apple clang, system
                           libc++, ad-hoc signature), README.txt. Written
                           2026-11-18, first run 2026-11-19 on Jeremy's Mac
@@ -112,14 +113,13 @@ THE FIVE RUNTIME IDENTIFIERS
   -------------  ----------------------------------  -------------  ---------
   linux-x64      linux/build.sh x64                  wasm-opt       BUILT
   linux-arm64    linux/build.sh arm64                wasm-opt       BUILT
-  win-x64        windows/build.wasm-opt.ps1          wasm-opt.exe   PENDING
+  win-x64        windows/build.wasm-opt.ps1          wasm-opt.exe   BUILT
   osx-arm64      macos/build.sh arm64                wasm-opt       BUILT
   osx-x64        macos/build.sh x64                  wasm-opt       BUILT
 
 BUILT = built here from binaryen/, gated and adopted into
-../../native_libraries/<rid>/ (the osx-* RIDs on Jeremy's Mac, 2026-11-19).
-PENDING = the script is written but has never been run; the owner runs it on
-the Windows machine.
+../../native_libraries/<rid>/ (the osx-* RIDs on Jeremy's Mac, 2026-11-19;
+win-x64 on Jeremy's Windows machine, 2026-11-19).
 BUILD-PROVENANCE.txt says, per RID, exactly what happened.
 
 NOT SUPPORTED, and neither built nor scripted: linux-riscv64, win-arm64,
