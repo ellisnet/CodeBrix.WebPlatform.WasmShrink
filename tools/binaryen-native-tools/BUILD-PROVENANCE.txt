@@ -1,0 +1,305 @@
+================================================================================
+tools/binaryen-native-tools/BUILD-PROVENANCE.txt
+what was actually built, when, by what, and with what result
+================================================================================
+
+WHY THIS FILE EXISTS
+--------------------------------------------------------------------------------
+A binary in a package is anonymous. This file is how anyone later can tell which
+executable came from which source, which toolchain and which build machine -
+without which "rebuild it and see if it matches" is not a question that can even
+be asked. Every time a binary is adopted into ../../native_libraries/<rid>/, its
+section here is updated from that build's output/<rid>/BUILD-INFO.txt and the
+wasm-opt.provenance.txt beside the binary is written from the same values.
+
+Common to every entry below
+--------------------------------------------------------------------------------
+  Source          : tools/binaryen-native-tools/binaryen/ - vendored, unmodified
+                    upstream snapshot (UPSTREAM.txt)
+  binaryen        : version_133 = commit
+                    fba5005a132d85d578be5bd010e0487ed8e2ce3e (released
+                    2026-09-21); `wasm-opt --version` = "wasm-opt version 133"
+  Patches applied : NONE. There is no patch step.
+  Shipped file    : wasm-opt (wasm-opt.exe on Windows), stripped. No unstripped
+                    twin is kept: the build passes no -g, so there is no debug
+                    information to keep
+  Licence files   : LICENSE-Binaryen.txt, LICENSE-Llvm.txt,
+                    LICENSE-LlvmSupport.txt, LICENSE-Unicode.txt,
+                    LICENSE-Fp16.txt beside every binary - one per piece
+                    compiled in (README.txt; linux/README.txt, WHAT IS
+                    COMPILED IN); see ../../THIRD-PARTY-NOTICES.txt
+
+Linux (the two linux-* entries)
+--------------------------------------------------------------------------------
+  Route           : linux/build.sh <arch> -> container-build.sh, inside
+                    codebrix-binaryen-build-<arch> (Containerfile.<arch>: the
+                    digest-pinned manylinux_2_28 base + cmake 4.4.3 + ninja
+                    1.13.2 + `file`; NO -devel packages), run with
+                    --network none
+  cmake options   : -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+                    -DBUILD_TESTS=OFF -DENABLE_WERROR=OFF -DBUILD_MIMALLOC=OFF
+                    -DBUILD_LLVM_DWARF=ON -DBYN_ENABLE_ASSERTIONS=ON
+                    -DCMAKE_SKIP_RPATH=ON  (each reasoned in linux/pins.env)
+                    CMAKE_C_FLAGS = CMAKE_CXX_FLAGS = "-ffile-prefix-map=
+                    /tmp/codebrix-binaryen-src=binaryen -ffile-prefix-map=
+                    /tmp/codebrix-binaryen-build=build -ffile-prefix-map=/work=
+                    binaryen-native-tools"
+                    CMAKE_EXE_LINKER_FLAGS = "-static-libstdc++ -static-libgcc
+                    -Wl,-z,stack-size=8388608 -Wl,--build-id=sha1
+                    -Wl,-Map=<build>/wasm-opt.map"
+                    CMake's Release -O3 -DNDEBUG, to which binaryen adds
+                    -UNDEBUG (assertions ON), -fno-rtti, -fno-omit-frame-pointer,
+                    -fPIC, -Wall -Wextra ...; target wasm-opt ONLY (285 build
+                    steps); then strip --strip-all
+  binaryen's own  : "Building libbinaryen as statically linked library.",
+  configure lines   "Building with -DBUILD_LLVM_DWARF", "Building with -UNDEBUG";
+                    no mimalloc, no -Werror, no shared library (gate item 7)
+  Compiled in     : identical on both RIDs (output/<rid>/third-party-evidence.txt,
+                    from the GNU ld map file and ninja's dependency log):
+                      libbinaryen.a: 263 members linked on x64, 262 on arm64
+                        (binaryen's src/,
+                        including the LLVM-derived src/support/suffix_tree.cpp
+                        and suffix_tree_node.cpp) plus wasm-opt.cpp and
+                        src/tools/fuzzing/*.cpp linked directly;
+                      third_party/llvm-project (CMake OBJECT library
+                        llvm_dwarf, merged into libbinaryen.a): 60 of its 63
+                        objects LINKED - not linked: Binary.cpp.o,
+                        ObjectFile.cpp.o, SymbolicFile.cpp.o. Linked among
+                        them: Path.cpp.o (includes Unix/Path.inc, the LLVM
+                        System Interface Library), ConvertUTF.cpp.o (Unicode,
+                        Inc. notice), MD5.cpp.o (Solar Designer's public-domain
+                        MD5, "Redistribution and use ... permitted", no
+                        conditions - no licence file needed);
+                      third_party/FP16 (header-only): included by
+                        src/wasm/literal.cpp, src/passes/Precompute.cpp,
+                        src/binaryen-c.cpp, src/tools/wasm-opt.cpp;
+                      third_party/wabt: NOT compiled (no object includes it);
+                      GCC runtime, static: libstdc++.a 108 members,
+                        libgcc_eh.a 2 (unwind-dw2.o, unwind-dw2-fde-dip.o),
+                        libgcc.a 1 (_popcountsi2.o); glibc's libc_nonshared.a
+                        2 (atexit.oS, elf-init.oS) - as in every glibc program
+                    (member counts are linux-x64's; linux-arm64's are in its
+                    section)
+  Gate            : linux/README.txt, THE VERIFICATION GATE (ELF, stripped,
+                    RPATH/TEXTREL, NEEDED + forbidden list + no GLIBCXX/CXXABI/
+                    GCC versions + ldd, glibc floor, no build paths, configure
+                    lines, the functional gate on gate-fixture.wat with the
+                    consumer's three flag sets and --fuzz-exec)
+  First-run fixes : NONE to the build. Both RIDs passed every gate check on
+                    their first run. One fix to the EVIDENCE step after the
+                    first linux-x64 run: llvm-project is an OBJECT library
+                    merged into libbinaryen.a, not an archive of its own, so
+                    container-build.sh now attributes libbinaryen.a members by
+                    the object folder they were compiled in. The binary was
+                    unaffected (run 2 is byte-identical to run 1).
+
+
+================================================================================
+linux-x64                                                         BUILT + PASSED
+================================================================================
+Built            : 2026-11-19 01:17:59 UTC (run 2; run 1 01:15:03 UTC -
+                   byte-identical)
+Built by         : linux/build.sh x64 -> container-build.sh
+Build host       : Dell Precision 7770, LMDE 7, x86_64, 24 cores, podman 5.4.2 -
+                   the x86_64 laptop itself (native)
+Duration         : 93s wall clock inside the container (run 1: 97s; run 1 end
+                   to end including the first derived-image build: 149s)
+Network          : DISABLED during this build (interfaces: lo)
+Derived image    : codebrix-binaryen-build-x86_64
+Base image       : quay.io/pypa/manylinux_2_28_x86_64:2026.07.19-1
+                   @sha256:a61875a2f84cab7df8de222ff12cabc08ff86eb4ad402ac90ba7bdaed9600cca
+Container OS     : AlmaLinux 8.10 (Cerulean Leopard), ldd (GNU libc) 2.28
+Compiler         : c++ (GCC) 14.2.1 20250110 (Red Hat 14.2.1-11)
+Linker           : GNU ld version 2.41-4.el8_10.1
+cmake / ninja    : cmake version 4.4.3 (pinned 4.4.3) / 1.13.2.git.kitware.jobserver-pipe-1 (pinned 1.13.2)
+Warnings         : 0 compiler warnings, 0 CMake warnings
+
+File             : wasm-opt
+Size (as linked) : 22,916,824 bytes (not kept)
+Size (stripped)  : 18,544,256 bytes   <- shipped
+Size (gzip -9 -n): 7,041,750 bytes
+SHA256           : 1d5a61af51a489947d47f425310e244c10e89e502680386c4b5940d430a9c5cf
+Build-id (sha1)  : db7a445e02c5c8906ab4d7af919d91eed140aae2
+ELF              : ELF64, Advanced Micro Devices X86-64, EXEC (not PIE)
+NEEDED           : libm.so.6 libpthread.so.0 libc.so.6 ld-linux-x86-64.so.2
+glibc floor      : 2.25 (allowed <= 2.28); versions referenced 2.2.5 2.3 2.3.2
+                   2.3.4 2.4 2.14 2.16 2.17 2.18 2.25
+C++ runtime      : static - no GLIBCXX_ / CXXABI_ / GCC_ version referenced;
+                   no libstdc++.so, no libgcc_s.so
+Toolchain paths  : three /builddir/build/BUILD/gcc-14.2.1-20250110/... libstdc++
+                   header paths, carried in by the static libstdc++ (Red Hat's
+                   GCC build, not ours); no path of this build
+Gate             : every check PASSED (output/linux-x64/GATE.txt):
+                     ELF class/machine; stripped; no RPATH/RUNPATH; no TEXTREL;
+                     NEEDED glibc-only; no C++ runtime versions; ldd resolves;
+                     glibc floor 2.25 <= 2.28; no build paths; the three
+                     required configure lines and none of the forbidden ones;
+                     functional: --version "wasm-opt version 133"; -O0 627 B
+                     and -Oz 373 B, both wasm magic + version 1; -Oz <= -O0;
+                     release set (--strip-debug -Oz) 373 B, debug set
+                     (--debuginfo -Oz) 437 B, packing set (--strip-debug
+                     --memory-packing -Oz) 373 B - each with the five
+                     --enable-* flags and --fuzz-exec, 8/8 results before =
+                     after = expected; --debuginfo larger than --strip-debug;
+                     all three outputs read back and re-run, 8/8 each
+Host check       : PASSED - the same functional gate run on the HOST, outside
+                   the container (LMDE 7, Debian GLIBC 2.41-12+deb13u4): ldd
+                   resolves libm, libpthread, libc, ld-linux-x86-64 from
+                   /lib/x86_64-linux-gnu; every check passed with the same
+                   sizes (output/linux-x64/HOST-CHECK.txt)
+Reproducible     : YES - two from-scratch builds (run 1 01:15:03 UTC, run 2
+                   01:17:59 UTC), stripped executables byte-identical (cmp)
+Adopted into native_libraries/linux-x64/ : YES, 2026-11-18, with the five
+                   LICENSE-*.txt files and wasm-opt.provenance.txt
+
+================================================================================
+linux-arm64                                                       BUILT + PASSED
+================================================================================
+Built            : 2026-11-19 01:23:22 UTC
+Built by         : linux/build.sh arm64 -> container-build.sh
+Build host       : Dell Precision 7770, LMDE 7, x86_64, podman 5.4.2 - the same
+                   x86_64 laptop, under qemu-user emulation (qemu-aarch64
+                   binfmt handler)
+Duration         : 1321s (22 min) wall clock inside the container; 1519s end
+                   to end including the first derived-image build (dnf + pip
+                   under emulation, about 3 min)
+Network          : DISABLED during this build (interfaces: lo)
+Derived image    : codebrix-binaryen-build-aarch64
+Base image       : quay.io/pypa/manylinux_2_28_aarch64:2026.07.19-1
+                   @sha256:162c81dfd3efc710732a571717d3c916a6945ebf279e879ddee3243af96fe46f
+Container OS     : AlmaLinux 8.10 (Cerulean Leopard), ldd (GNU libc) 2.28
+Compiler         : c++ (GCC) 14.2.1 20250110 (Red Hat 14.2.1-11)
+Linker           : GNU ld version 2.41-4.el8_10.1
+cmake / ninja    : cmake version 4.4.3 (pinned 4.4.3) / 1.13.2.git.kitware.jobserver-pipe-1 (pinned 1.13.2)
+Warnings         : 0 compiler warnings, 0 CMake warnings
+
+File             : wasm-opt
+Size (as linked) : 22,382,264 bytes (not kept)
+Size (stripped)  : 17,766,272 bytes   <- shipped
+Size (gzip -9 -n): 6,630,062 bytes
+SHA256           : f1d67d2358ee86d6b41843f5ae9295ef84fde74c3eba4ef740d2e5d57814f035
+Build-id (sha1)  : 984a463c112b876985f3db239084dd7d298a066d
+ELF              : ELF64, AArch64, EXEC (not PIE)
+NEEDED           : libm.so.6 libpthread.so.0 libc.so.6 ld-linux-aarch64.so.1
+glibc floor      : 2.25 (allowed <= 2.28); versions referenced 2.17 2.18 2.25
+C++ runtime      : static - no GLIBCXX_ / CXXABI_ / GCC_ version referenced;
+                   no libstdc++.so, no libgcc_s.so
+Toolchain paths  : three /builddir/build/BUILD/gcc-14.2.1-20250110/... libstdc++
+                   header paths (Red Hat's GCC build, via the static
+                   libstdc++); no path of this build
+Compiled in      : the same 60 of 63 llvm-project objects as linux-x64, the
+                   same four FP16-including objects; libbinaryen.a 262 members
+                   (linux-x64: 263 - runtime-global.cpp.o is pulled in on x64
+                   only; recorded, not investigated); libstdc++.a 108,
+                   libgcc_eh.a 5 (adds the aarch64 SME helpers
+                   __aarch64_have_sme.o, __arm_tpidr2_save.o,
+                   __arm_za_disable.o), libgcc.a 9 (the LSE atomics helpers
+                   cas/ldadd/swp, lse-init.o, eqtf2.o, sfp-exceptions.o),
+                   libc_nonshared.a 2 (atexit.oS, elf-init.oS)
+Gate             : every check PASSED (output/linux-arm64/GATE.txt) - the
+                   same checks and the same functional results as linux-x64
+                   (-O0 627 B, -Oz 373 B, release 373 B, debug 437 B, packing
+                   373 B, 8/8 --fuzz-exec results in every run and read-back)
+Note             : the functional gate EXECUTED the aarch64 binary under qemu.
+                   qemu is not silicon; running the managed test suite on real
+                   arm64 hardware remains worth doing before a release
+Host check       : not possible - the build host is x86_64
+Reproducible     : not measured (one build; not required for arm64)
+Adopted into native_libraries/linux-arm64/ : YES, 2026-11-18, with the five
+                   LICENSE-*.txt files and wasm-opt.provenance.txt
+
+================================================================================
+win-x64                                       PENDING - script written, NOT RUN
+================================================================================
+Route            : windows/build.wasm-opt.ps1 - written 2026-11-18 on Linux,
+                   NEVER RUN. MSVC (Visual Studio 2022+) through CMake's Ninja
+                   generator, static CRT (-DCMAKE_MSVC_RUNTIME_LIBRARY=
+                   MultiThreaded), the pins.env cmake options, target wasm-opt
+                   only. Gate: PE machine, OS-only imports (no VCRUNTIME /
+                   MSVCP / ucrtbase / api-ms-win-crt), no user-profile or
+                   repository path, configure lines, and the functional gate
+                   in PowerShell
+Binary           : NONE. native_libraries/win-x64/ does not exist yet
+To do            : the owner runs the script on his Windows machine, fixes
+                   what the first run finds IN THE SCRIPT, adopts the result
+                   (windows/README.txt) and replaces this section
+
+================================================================================
+osx-arm64                                     PENDING - script written, NOT RUN
+================================================================================
+Route            : macos/build.sh arm64 - written 2026-11-18 on Linux, NEVER
+                   RUN. Apple clang via CMake + Ninja,
+                   CMAKE_OSX_ARCHITECTURES=arm64, deployment target 11.0,
+                   system libc++, strip + ad-hoc codesign; gate: thin slice,
+                   system-only links, no LC_RPATH, minos, codesign --verify, no
+                   build paths, configure lines, functional-gate.sh
+Binary           : NONE. native_libraries/osx-arm64/ does not exist yet
+To do            : run on the owner's Apple Silicon Mac; adopt per
+                   macos/README.txt and replace this section
+
+================================================================================
+osx-x64                                       PENDING - script written, NOT RUN
+================================================================================
+Route            : macos/build.sh x64 - as osx-arm64 with
+                   CMAKE_OSX_ARCHITECTURES=x86_64 and deployment target 10.15,
+                   cross-built on the Apple Silicon Mac; the functional gate
+                   runs it under Rosetta 2 when Rosetta is installed
+Binary           : NONE. native_libraries/osx-x64/ does not exist yet
+To do            : as osx-arm64
+
+================================================================================
+DIFFERENCES FROM UPSTREAM'S RELEASE BUILD
+================================================================================
+Upstream's release binaries come from its .github/workflows/
+create_release.yml (read at version_133 in the release archive; that folder
+is not kept in this repository - see UPSTREAM.txt). What it does, and where this
+folder's builds differ:
+
+  Linux, upstream : job build-alpine on ubuntu-latest and ubuntu-24.04-arm, in
+                    a node:lts-alpine container: musl libc, Alpine's GCC,
+                    -DCMAKE_C_FLAGS=-static -DCMAKE_CXX_FLAGS=-static
+                    (a FULLY STATIC executable), -DBUILD_SHARED_LIBS=OFF,
+                    -DBUILD_MIMALLOC=ON (mimalloc, because musl's allocator is
+                    slow under many threads), -Wl,-z,stack-size=8388608,
+                    everything else default; builds and installs ALL tools,
+                    runs the full check.py test suite, then `strip`.
+  Linux, here     : manylinux_2_28 (AlmaLinux 8, glibc 2.28), GCC 14.2.1,
+                    glibc linked DYNAMICALLY (floor 2.25 referenced), libstdc++
+                    and libgcc STATIC; glibc's own allocator (mimalloc is a
+                    submodule, absent, and glibc's malloc does not have musl's
+                    multi-threading problem); the same 8 MB main-thread stack.
+                    Reason: the CodeBrix Linux natives all come from one pinned
+                    manylinux userland, and a glibc-dynamic executable behaves
+                    like every other program on the user's system (locale, DNS,
+                    allocator) while still starting on Debian 10 / Ubuntu 20.04
+                    / RHEL 8 and newer.
+  Every platform  : * wasm-opt target ONLY (upstream: every tool and libbinaryen,
+                      `--target install`);
+                    * BUILD_TESTS=OFF (gtest is an absent submodule) and no
+                      check.py - the functional gate (gate-fixture.wat, the
+                      consumer's flag sets, --fuzz-exec) is run instead.
+                      Upstream's own test suite was NOT run on these binaries;
+                    * ENABLE_WERROR=OFF (upstream: default ON) - warnings are
+                      counted instead (0 on linux-x64);
+                    * BUILD_SHARED_LIBS=OFF stated on every platform - upstream's
+                      macOS release leaves the Unix default ON, so its macOS
+                      wasm-opt loads @rpath/libbinaryen.dylib from ../lib; ours
+                      is one self-contained file (MSVC forces static anyway);
+                    * CMAKE_SKIP_RPATH=ON - no $ORIGIN/../lib (Linux) or
+                      @loader_path/../lib (macOS) run path, since nothing lives
+                      there;
+                    * -ffile-prefix-map (Linux, macOS), -Wl,--build-id=sha1 and
+                      a linker map file (Linux) - no effect on generated code;
+                    * stripping: Linux `strip --strip-all` (upstream `strip`, the
+                      same thing for an executable); macOS `strip` + ad-hoc
+                      codesign (upstream `strip -x`, which keeps the global
+                      symbols, and no re-sign); Windows: no symbols are emitted
+                      in Release, as upstream.
+  Unchanged       : CMAKE_BUILD_TYPE=Release, BUILD_LLVM_DWARF=ON,
+                    BYN_ENABLE_ASSERTIONS=ON (upstream ships assertions enabled,
+                    and so do we), Ninja (upstream macOS; upstream Windows uses
+                    the Visual Studio generator), the static MSVC runtime
+                    (binaryen's CMakeLists selects it for non-Debug MSVC
+                    builds), macOS deployment floors 10.15 (x64) / 11.0 (arm64)
+                    and the system libc++.
+================================================================================

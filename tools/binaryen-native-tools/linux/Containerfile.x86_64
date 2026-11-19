@@ -1,0 +1,77 @@
+# =============================================================================================
+# Containerfile.x86_64 - the binaryen (wasm-opt) build machine for linux-x64
+# =============================================================================================
+#
+# WHAT THIS IS, AND WHY IT IS A SEPARATE STEP
+#   The rule this folder exists for says the BUILD may not reach outside this repository.
+#   Tools installed on a build machine are the one allowed exception - and this file IS that
+#   installation, written down and version-pinned: it takes the digest-pinned manylinux base
+#   image (AlmaLinux 8, gcc-toolset-14 = GCC 14.2.1, glibc 2.28) and adds cmake, ninja and
+#   `file`. Nothing else.
+#
+#   Building this image is the ONLY step that uses the network. The wasm-opt build afterwards
+#   runs with `--network none` and cannot reach anything even if it wanted to.
+#
+#   build.sh builds this image the first time it is needed and reuses it after that.
+#   To rebuild deliberately:   FORCE_IMAGE_REBUILD=1 ./build.sh x64
+#
+# WHY NO -devel PACKAGES. wasm-opt needs a C++20 compiler and its own source, nothing more:
+# the bundled pieces (LLVM's DWARF code, FP16) are in ../binaryen/third_party, and the static
+# libstdc++.a / libgcc_eh.a that -static-libstdc++ -static-libgcc link come with the image's
+# gcc-toolset-14. The probe below proves that a static-libstdc++ C++20 program links and runs.
+#
+# EVERY VERSION HERE COMES FROM pins.env. The defaults below exist only so a hand-run
+# `podman build -f Containerfile.x86_64 .` still works; build.sh always passes --build-arg.
+# =============================================================================================
+
+ARG BASE_IMAGE=quay.io/pypa/manylinux_2_28_x86_64@sha256:a61875a2f84cab7df8de222ff12cabc08ff86eb4ad402ac90ba7bdaed9600cca
+FROM ${BASE_IMAGE}
+
+ARG CMAKE_VERSION=4.4.3
+ARG NINJA_VERSION=1.13.2
+ARG PYTHON_IN_IMAGE=/opt/python/cp313-cp313/bin/python
+
+LABEL org.opencontainers.image.title="codebrix-binaryen-build-x86_64"
+LABEL org.opencontainers.image.description="binaryen wasm-opt build machine: quay.io/pypa/manylinux_2_28_x86_64 + cmake + ninja"
+LABEL org.opencontainers.image.source="CodeBrix.WebPlatform.WasmShrink/tools/binaryen-native-tools/linux/Containerfile.x86_64"
+
+# ---------------------------------------------------------------------------------------------
+# 1. Distro packages: `file` for the gate (binutils - readelf, nm, objdump, strings, strip -
+#    already comes with the image's gcc toolset).
+# ---------------------------------------------------------------------------------------------
+RUN set -eux; \
+    command -v dnf > /dev/null 2>&1 || { echo "ERROR: no dnf in this image." >&2; exit 1; }; \
+    dnf install -y --setopt=install_weak_deps=False file; \
+    dnf clean all
+
+# ---------------------------------------------------------------------------------------------
+# 2. cmake + ninja, at the pinned versions, from the image's own CPython.
+# ---------------------------------------------------------------------------------------------
+RUN set -eux; \
+    "${PYTHON_IN_IMAGE}" -m pip install --no-cache-dir "cmake==${CMAKE_VERSION}" "ninja==${NINJA_VERSION}"; \
+    ln -sf "$(dirname "${PYTHON_IN_IMAGE}")/cmake" /usr/local/bin/cmake; \
+    ln -sf "$(dirname "${PYTHON_IN_IMAGE}")/ninja" /usr/local/bin/ninja
+
+# ---------------------------------------------------------------------------------------------
+# 3. Prove the toolchain. A missing or too-old tool fails the IMAGE build, here, where the
+#    message is obvious - not twenty minutes into a build. The probe compiles a C++20 program
+#    with -static-libstdc++ -static-libgcc, checks it needs neither libstdc++.so nor
+#    libgcc_s.so, and RUNS it.
+# ---------------------------------------------------------------------------------------------
+RUN set -eux; \
+    echo "=== toolchain in codebrix-binaryen-build-x86_64 ==="; \
+    grep -m1 PRETTY_NAME /etc/os-release; \
+    uname -m; \
+    c++ --version | sed -n 1p; \
+    ld --version | sed -n 1p; \
+    ldd --version | sed -n 1p; \
+    cmake --version | sed -n 1p; \
+    ninja --version; \
+    for t in file readelf nm objdump strings strip gzip cmp od; do command -v "$t"; done; \
+    printf '#include <span>\n#include <string>\n#include <cstdio>\nint main(){ int a[3]={1,2,3}; std::span<int> s(a); std::string t = std::to_string(s.size()); std::printf("c++20 static-libstdc++ probe: %%s\\n", t.c_str()); return t == "3" ? 0 : 1; }\n' > /tmp/probe.cpp; \
+    c++ -std=c++20 -O1 -o /tmp/probe /tmp/probe.cpp -static-libstdc++ -static-libgcc; \
+    if readelf -d /tmp/probe | grep -E 'NEEDED.*(libstdc\+\+|libgcc_s)'; then echo "ERROR: probe still needs libstdc++ / libgcc_s" >&2; exit 1; fi; \
+    /tmp/probe; \
+    echo "toolchain: ok"
+
+WORKDIR /work

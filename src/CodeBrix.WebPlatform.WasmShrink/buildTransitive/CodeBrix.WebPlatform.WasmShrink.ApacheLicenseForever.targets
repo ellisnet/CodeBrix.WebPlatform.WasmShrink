@@ -1,0 +1,17 @@
+<Project>
+
+  <!--
+    Copies the wasm-opt programs that ship in this package (tools/wasm-opt/<rid>/) into the output
+    folder of the project that references it - directly or through another package - as
+    wasm-opt/<rid>/. CodeBrix.WebPlatform.WasmShrink.WasmShrinkTool looks for them there.
+
+    Every platform's copy is taken, so the built output can be moved to another supported machine.
+  -->
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\tools\wasm-opt\**\*"
+          Link="wasm-opt\%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          Visible="false" />
+  </ItemGroup>
+
+</Project>

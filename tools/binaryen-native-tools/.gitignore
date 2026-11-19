@@ -1,0 +1,48 @@
+# ==============================================================================
+# tools/binaryen-native-tools/.gitignore
+# ==============================================================================
+#
+# THE FIRST RULE BELOW ("!*") IS LOAD-BEARING - DO NOT DELETE IT.
+#
+# The repository-root .gitignore is the standard Visual Studio / .NET one. It
+# ignores names that also occur inside the vendored binaryen tree and in this
+# folder's own scripts, for example:
+#
+#     *.env                     -> linux/pins.env
+#     *.log  [Oo]ut/  [Ll]og/  [Dd]ebug/  [Rr]elease/  bld/  [Oo]bj/ ...
+#     [Ww][Ii][Nn]32/  [Aa][Rr][Mm]64/  *.obj  *.pdb  ...
+#
+# Without the "!*" below, such files would be silently left out of every
+# commit, and the vendored snapshot (or the build pins) would not be there for
+# the next person who cloned this repository. A nested .gitignore takes
+# precedence over the ones above it, so re-including everything here and then
+# re-ignoring only what this folder genuinely produces is the correct fix - and
+# it keeps the root .gitignore untouched. (Same rule, same reason, as
+# CodeBrix.LibGit2's libgit2-native-tools/.gitignore.)
+#
+# binaryen/.gitignore is UPSTREAM's own file and part of the unmodified
+# snapshot. It is deeper than this one, so it still applies inside binaryen/ -
+# which is correct: it only names build products and editor files, and no file
+# in the version_133 tarball matches it (see UPSTREAM.txt).
+#
+# Verify at any time with:
+#     git status --ignored --porcelain -- tools/binaryen-native-tools
+#         -> should list only output/ contents (and nothing at all on a clean
+#            clone)
+# ==============================================================================
+
+# Re-include everything under this folder, overriding the root .gitignore.
+!*
+!*/
+
+# --- what this folder really does produce, and must not commit ---------------
+
+# Built executables, gate runs, logs, SHA256SUMS. ONE tree, shared by every
+# platform build. THE LEADING SLASH MATTERS: without it the pattern would match
+# ANY directory named "output" at any depth, including inside binaryen/.
+/output/
+
+# Finder droppings. Needed explicitly: the "!*" above re-includes everything
+# under this folder and so overrides any .DS_Store rule inherited from the root
+# or from a user's global gitignore.
+.DS_Store

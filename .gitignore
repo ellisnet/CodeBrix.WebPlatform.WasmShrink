@@ -424,3 +424,15 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# ---------------------------------------------------------------------------
+# CodeBrix.WebPlatform.WasmShrink
+# ---------------------------------------------------------------------------
+# Output of the native build scripts (the finished files are copied to native_libraries/).
+tools/binaryen-native-tools/output/
+
+# The vendored source tree is an exact copy of what upstream published, and native_libraries/
+# holds the committed binaries that go into the package. NOTHING above may hide a file inside
+# either of them. These lines must stay last.
+!tools/binaryen-native-tools/binaryen/**
+!native_libraries/**

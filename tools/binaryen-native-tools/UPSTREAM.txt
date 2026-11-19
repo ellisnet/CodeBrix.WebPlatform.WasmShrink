@@ -1,0 +1,153 @@
+================================================================================
+tools/binaryen-native-tools - WHERE THE VENDORED TREE CAME FROM
+================================================================================
+
+This folder vendors one upstream source tree, binaryen/. It is never edited.
+Nothing in any build script here clones, downloads or otherwise fetches source
+at build time - see README.txt for the rule this exists to satisfy. This file
+records the tree's identity, exactly how the copy was made, what is absent,
+and how to check it again. It records MECHANICS ONLY; the licence facts are in
+../../THIRD-PARTY-NOTICES.txt.
+
+This file sits BESIDE the tree rather than inside it, so binaryen/ contains
+upstream's files and nothing else.
+
+
+================================================================================
+binaryen/ - binaryen version_133
+================================================================================
+Project        : binaryen - compiler and toolchain infrastructure library for
+                 WebAssembly (wasm-opt is its optimiser)
+Upstream URL   : https://github.com/WebAssembly/binaryen
+Release tag    : version_133
+Tag commit     : fba5005a132d85d578be5bd010e0487ed8e2ce3e
+Release date   : 2026-09-21 (GitHub release published; every file in the
+                 tarball carries the mtime 2026-09-21 15:46)
+Version        : CMakeLists.txt: project(binaryen LANGUAGES C CXX VERSION 133)
+                 => `wasm-opt --version` reports "wasm-opt version 133" (the
+                 tree has no .git, so CMake does not run `git describe`)
+
+Source archive : https://github.com/WebAssembly/binaryen/archive/refs/tags/
+                 version_133.tar.gz
+                 (GitHub's generated archive of the tag; top-level folder
+                 binaryen-version_133/)
+  size         : 7,125,749 bytes
+  sha256       : 2f3e3d9edc56751499571da073a8a81943ca3fcbc08a945d2c619a7a1d4eb88b
+
+What is in the tree: the archive, MINUS ONE FOLDER (see REMOVED below) -
+3,036 files, no symlinks, about 50 MB unpacked: src/, third_party/
+(llvm-project, FP16, wabt/wasm2c and the placeholder folders), test/
+(including binaryen's lit and gtest sources and its .wasm test inputs),
+scripts/, media/, and the top-level files (LICENSE, README.md, CHANGELOG.md,
+CMakeLists.txt, ...).
+
+REMOVED from the copy, 2026-11-18, by the repository owner's decision: the
+folder .github/ - upstream's own GitHub configuration, four files:
+
+    .github/CODEOWNERS
+    .github/codecov.yml
+    .github/workflows/ci.yml
+    .github/workflows/create_release.yml
+
+This repository carries no GitHub workflow files, vendored ones included.
+Nothing in any build reads that folder. (create_release.yml was read once, as
+the reference for how upstream configures its own release builds; what it
+does is recorded in BUILD-PROVENANCE.txt, DIFFERENCES FROM UPSTREAM'S RELEASE
+BUILD.) Every OTHER file of the archive is present and unmodified. When the
+tree is replaced with a newer release, remove that folder again.
+
+What is also ABSENT, by design: the git submodules. GitHub's tag archive does
+not include them, and none is wanted:
+
+    third_party/googletest     https://github.com/google/googletest.git
+    third_party/fuzztest       https://github.com/google/fuzztest
+    third_party/mimalloc       https://github.com/microsoft/mimalloc.git
+    test/spec/testsuite        https://github.com/WebAssembly/testsuite.git
+
+The archive carries those four paths as EMPTY directories. Git does not track
+empty directories, so a clone of this repository will not have them at all;
+nothing in the build needs them (BUILD_TESTS=OFF, BUILD_FUZZTEST=OFF,
+BUILD_MIMALLOC=OFF - linux/pins.env), and binaryen's CMake references none of
+them under those options. A copy taken from a fresh clone therefore differs
+from the archive by exactly those four empty directories and the removed
+.github/ folder.
+
+How the copy was made, 2026-11-18 (the one-time vendoring step; the archive
+had been downloaded once, beforehand, to a scratch folder outside the
+repository):
+
+    sha256sum binaryen-version_133.tar.gz      # must print 2f3e3d9e...1d4eb88b
+    #   (the full value is the sha256 above)
+    mkdir -p tools/binaryen-native-tools/binaryen
+    tar -xzf binaryen-version_133.tar.gz \
+        -C tools/binaryen-native-tools/binaryen --strip-components=1
+
+Afterwards `diff -r -q` against a second, independent extraction of the same
+archive reported no differences. The .github/ folder was then removed:
+
+    rm -r tools/binaryen-native-tools/binaryen/.github
+
+Tree checksum, AFTER that removal (run from inside binaryen/):
+
+    find . \( -type f -o -type l \) | LC_ALL=C sort \
+        | xargs -d '\n' sha256sum | sha256sum
+
+    338846b404855f7d35b11e9a34001d0d729123383c7195e4122153378f95f4cc  -
+
+(With .github/ still present - the state the linux-x64 and linux-arm64
+binaries of 2026-11-18 were built from - the same command gave
+a31825c569f9400bc5e6ca3e4677d5bd2abf5f084402de523fc0bbb48152af7b. The removed
+folder is not read by any build, so the binaries are unaffected.)
+
+Upstream's own binaryen/.gitignore is part of the snapshot. No file in the
+archive matches it (`git ls-files --others --ignored --exclude-standard` over
+the vendored tree lists nothing), so a plain `git add` of this folder picks up
+the whole tree - ../.gitignore re-includes what the repository-root .gitignore
+would otherwise hide (see its comment).
+
+NOTHING IN THE BUILD FETCHES. binaryen's CMake has no FetchContent and no
+ExternalProject. The only files it generates are written to the build folder:
+config.h (from config.h.in), src/passes/WasmIntrinsics.cpp (from
+src/passes/wasm-intrinsics.wat, embedded as bytes by CMake itself - no Python
+needed), test/lit/lit.site.cfg.py and bin/binaryen-lit. The Linux builds
+prove the absence of network use on every run by building with no network
+interface.
+
+
+================================================================================
+NOT MODIFIED
+================================================================================
+Apart from the removal of .github/ recorded above, no file in binaryen/ has
+been modified, renamed, reformatted or deleted, and none ever should be. Every build copies the tree to a scratch folder and builds
+there. There is no patch mechanism in this folder: if a build ever needed a
+change to upstream source, the rule is to stop and decide, not to patch
+quietly. (None has been needed: the linux-x64 and linux-arm64 builds of
+2026-11-18 passed every gate check from the unmodified tree, with build
+options only - see BUILD-PROVENANCE.txt.)
+
+
+VERIFYING THE SNAPSHOT AGAINST UPSTREAM (optional, needs network)
+--------------------------------------------------------------------------------
+Against the release archive (expect identical content):
+
+    curl -L -o /tmp/byn.tar.gz \
+        https://github.com/WebAssembly/binaryen/archive/refs/tags/version_133.tar.gz
+    sha256sum /tmp/byn.tar.gz      # GitHub regenerates these archives; if the
+                                   # hash ever differs, compare the content:
+    mkdir /tmp/byn-verify && tar -xzf /tmp/byn.tar.gz -C /tmp/byn-verify \
+        --strip-components=1
+    diff -r /tmp/byn-verify binaryen          # expect only "Only in
+                                              # /tmp/byn-verify: .github" (and,
+                                              # on a clone, the four empty
+                                              # submodule folders)
+
+Against the git tag (expect no differences besides .git, .github and the
+submodules):
+
+    git clone --branch version_133 https://github.com/WebAssembly/binaryen.git \
+        /tmp/byn-git
+    git -C /tmp/byn-git rev-parse HEAD        # fba5005a132d85d578be5bd010e0487ed8e2ce3e
+    diff -r -x .git /tmp/byn-git binaryen
+
+Those checks are a convenience for a human, not a build step.
+================================================================================

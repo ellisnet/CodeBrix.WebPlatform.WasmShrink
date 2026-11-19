@@ -1,0 +1,32 @@
+# Line endings: LF, everywhere, on every platform.
+#
+# The committed files are already LF. These rules only stop a checkout from
+# changing them (core.autocrlf=true on Windows would expand LF to CRLF).
+* text=auto eol=lf
+
+# Never touched. A binary file with newline translation applied to it is
+# silently corrupt, so these are declared rather than left to git's heuristic.
+*.png    binary
+*.nupkg  binary
+*.dylib  binary
+*.so     binary
+*.dll    binary
+*.exe    binary
+*.pdb    binary
+*.xz     binary
+*.gz     binary
+*.zip    binary
+*.wasm   binary
+*.a      binary
+*.lib    binary
+*.o      binary
+*.ico    binary
+*.jpg    binary
+*.gif    binary
+
+# The wasm-opt executables that go into the package (no file extension on Linux and macOS).
+native_libraries/**/wasm-opt  binary
+
+# The files of the vendored source tree are byte-for-byte what upstream published. Git must not
+# normalise line endings inside it, or they would no longer match the recorded upstream archive.
+tools/binaryen-native-tools/binaryen/**  -text

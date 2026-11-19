@@ -1,0 +1,92 @@
+wasm-opt -- Linux x64 (linux-x64)
+================================================================================
+This executable was BUILT HERE, from the binaryen source snapshot vendored in
+this repository, by:
+
+    tools/binaryen-native-tools/linux/build.sh x64   (-> container-build.sh)
+
+inside a digest-pinned manylinux container with the network DISABLED. Nothing
+was downloaded; the build reaches nothing outside this repository. It was built
+twice from scratch on 2026-11-18 (runs 1 and 2) with byte-identical results.
+
+binaryen version  : 133 (tag version_133); `wasm-opt --version` prints
+                    "wasm-opt version 133"
+binaryen commit   : fba5005a132d85d578be5bd010e0487ed8e2ce3e
+Source            : tools/binaryen-native-tools/binaryen/ (unmodified; see
+                    tools/binaryen-native-tools/UPSTREAM.txt)
+Patches applied   : none
+
+Built             : 2026-11-19 01:17:59 UTC (run 2; run 1 01:15:03 UTC,
+                    identical bytes)
+Build duration    : 93s (wall clock inside the container)
+Build host        : Dell Precision 7770 laptop, LMDE 7, x86_64, podman 5.4.2
+                    (the x86_64 laptop itself - native)
+Network           : DISABLED during this build (interfaces: lo)
+Derived image     : codebrix-binaryen-build-x86_64
+Base image        : quay.io/pypa/manylinux_2_28_x86_64:2026.07.19-1
+                    @sha256:a61875a2f84cab7df8de222ff12cabc08ff86eb4ad402ac90ba7bdaed9600cca
+Container OS      : AlmaLinux 8.10 (Cerulean Leopard)
+Toolchain         : c++ (GCC) 14.2.1 20250110 (Red Hat 14.2.1-11)
+                    GNU ld version 2.41-4.el8_10.1
+                    cmake version 4.4.3 (pinned) / ninja 1.13.2 (pinned)
+Container glibc   : ldd (GNU libc) 2.28
+CMake options     : -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+                    -DBUILD_TESTS=OFF -DENABLE_WERROR=OFF -DBUILD_MIMALLOC=OFF
+                    -DBUILD_LLVM_DWARF=ON -DBYN_ENABLE_ASSERTIONS=ON
+                    -DCMAKE_SKIP_RPATH=ON
+                    CMAKE_C_FLAGS / CMAKE_CXX_FLAGS =
+                      "-ffile-prefix-map=/tmp/codebrix-binaryen-src=binaryen
+                       -ffile-prefix-map=/tmp/codebrix-binaryen-build=build
+                       -ffile-prefix-map=/work=binaryen-native-tools"
+                    CMAKE_EXE_LINKER_FLAGS = "-static-libstdc++ -static-libgcc
+                      -Wl,-z,stack-size=8388608 -Wl,--build-id=sha1
+                      -Wl,-Map=<build>/wasm-opt.map"
+                    Release flags -O3 -DNDEBUG (CMake's) + binaryen's -UNDEBUG
+                    (assertions on); target wasm-opt only; then
+                    strip --strip-all
+Warnings          : 0 compiler, 0 CMake
+
+Architecture      : ELF64, Advanced Micro Devices X86-64, EXEC
+Dynamic deps      : libm.so.6 libpthread.so.0 libc.so.6 ld-linux-x86-64.so.2
+                    - glibc only; libstdc++ and libgcc are linked statically
+                    (no GLIBCXX_ / CXXABI_ / GCC_ symbol version referenced)
+glibc floor       : 2.25 (allowed <= 2.28)
+RPATH / RUNPATH   : none
+Build-id (sha1)   : db7a445e02c5c8906ab4d7af919d91eed140aae2
+
+Output SHA-256    : 1d5a61af51a489947d47f425310e244c10e89e502680386c4b5940d430a9c5cf
+Output size       : 18544256 bytes (stripped; 7041750 bytes with gzip -9 -n)
+
+Gate              : ELF class/machine, stripped, no RPATH/RUNPATH/TEXTREL,
+                    glibc-only NEEDED (libstdc++/libgcc_s forbidden), no C++
+                    runtime symbol versions, ldd resolves, glibc floor, no
+                    build paths, binaryen's configure lines (static library,
+                    LLVM DWARF, assertions; no mimalloc, no -Werror), and the
+                    functional gate on linux/gate-fixture.wat: --version 133;
+                    -O0 / -Oz valid wasm, -Oz no larger; the consumer's three
+                    flag sets (five --enable-* features with --strip-debug -Oz
+                    | --debuginfo -Oz | --strip-debug --memory-packing -Oz)
+                    accepted, each with --fuzz-exec 8/8 results before = after
+                    = expected; --debuginfo larger than --strip-debug; every
+                    output read back and re-run 8/8
+                    - ALL PASSED, inside the container AND once more on the
+                    build host (LMDE 7, glibc 2.41), outside any container
+
+Vendored on       : 2026-11-18
+
+LICENCE FILES BESIDE THIS ONE (one per piece compiled into wasm-opt; the
+linker-map evidence is in tools/binaryen-native-tools/BUILD-PROVENANCE.txt):
+  LICENSE-Binaryen.txt     binaryen's LICENSE, verbatim (Apache-2.0)
+  LICENSE-Llvm.txt         third_party/llvm-project/include/llvm/LICENSE.TXT,
+                           verbatim (Apache-2.0 WITH LLVM-exception; legacy
+                           University of Illinois/NCSA licence) - LLVM's DWARF
+                           and Support code, 60 objects linked
+  LICENSE-LlvmSupport.txt  third_party/llvm-project/include/llvm/Support/
+                           LICENSE.TXT, verbatim - the LLVM System Interface
+                           Library's extra copyright line (Path.cpp with
+                           Unix/Path.inc is linked)
+  LICENSE-Unicode.txt      the Unicode, Inc. notice from ConvertUTF.cpp's
+                           header, verbatim (ConvertUTF.cpp is linked)
+  LICENSE-Fp16.txt         third_party/FP16/LICENSE, verbatim (MIT) - the
+                           header-only half-precision conversions
+See THIRD-PARTY-NOTICES.txt in the repository root.
